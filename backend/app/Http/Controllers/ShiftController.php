@@ -10,11 +10,11 @@ class ShiftController extends Controller
 {
     public function index()
     {
-        return Shift::with('user')->get();
+        return Shift::all();
     }
 
     public function show($id)
-    {
+    {   
         return Shift::with('user')->findOrFail($id);
     }
 

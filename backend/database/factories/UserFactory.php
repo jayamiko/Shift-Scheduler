@@ -28,11 +28,10 @@ class UserFactory extends Factory
             'name' => $this->faker->name(),
             'email' => $this->faker->unique()->safeEmail(),
             'email_verified_at' => now(),
-            'password' => bcrypt('password'),
+            'password' => bcrypt('password'), 
             'remember_token' => Str::random(10),
-            'is_admin' => false, 
-            'role_id' => Role::inRandomOrder()->first()?->id,
-        ];       
+            'role_id' => Role::inRandomOrder()->first()->id, 
+        ];      
     }
 
     /**
