@@ -18,7 +18,7 @@ return new class extends Migration
             $table->time('end_time');
             $table->string('role');
             $table->string('location');
-            $table->foreignId('assigned_to')->nullable()->constrained('users');
+            $table->foreignId('assigned_to')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
         });
     }

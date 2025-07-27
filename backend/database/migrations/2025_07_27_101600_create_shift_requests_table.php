@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('shift_requests', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users');
-            $table->foreignId('shift_id')->constrained('shifts');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('shift_id')->constrained()->onDelete('cascade');
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->timestamps();
         });
