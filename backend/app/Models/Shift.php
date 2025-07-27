@@ -15,4 +15,9 @@ class Shift extends Model
     {
         return $this->belongsTo(User::class, 'assigned_to');
     }
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class);
+    }
 }

@@ -4,17 +4,21 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\User;
+use App\Models\Role;
 use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
     public function run(): void
     {
+        $roles = Role::pluck('id')->toArray();
+
         User::create([
             'name' => 'Admin',
             'email' => 'admin@example.com',
             'password' => Hash::make('admin123'),
             'is_admin' => true,
+            'role_id' => fake()->randomElement($roles),
         ]);
 
         User::factory(5)->create();

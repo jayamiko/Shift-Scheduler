@@ -53,4 +53,14 @@ class ShiftController extends Controller
         Shift::destroy($id);
         return response()->noContent();
     }
+
+    public function assignedToMe(Request $request)
+    {
+        return Shift::where('assigned_to', $request->user()->id)->get();
+    }
+
+    public function unassigned()
+    {
+        return Shift::whereNull('assigned_to')->get();
+    }
 }
