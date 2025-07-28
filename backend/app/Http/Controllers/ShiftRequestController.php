@@ -27,19 +27,13 @@ class ShiftRequestController extends Controller
         }
 
         $existingRequest = ShiftRequest::where('shift_id', $shift->id)
-            ->where('status', '!=', 'rejected')
+            ->where('status', '==', 'approved')
             ->first();
 
-        if ($existingRequest) {
-            if ($existingRequest->user_id === $user->id) {
-                return response()->json([
-                    'error' => 'You have already requested this shift.'
-                ], 409);
-            } else {
-                return response()->json([
-                    'error' => 'This shift has already been requested by another user.'
-                ], 409);
-            }
+        if ($existingRequest && $existingRequest->user_id === $user->id) {
+            return response()->json([
+                'error' => 'You have already requested this shift.'
+            ], 409);
         }
 
         $overlap = ShiftRequest::where('user_id', $user->id)
@@ -107,7 +101,7 @@ class ShiftRequestController extends Controller
             return response()->json(['message' => 'Status invalid'], 400);
         }
 
-        $query = ShiftRequest::with('shift');
+        $query = ShiftRequest::with(['shift', 'user']);
 
         if ($status) {
             $query->where('status', $status);

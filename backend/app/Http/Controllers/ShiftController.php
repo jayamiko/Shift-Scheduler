@@ -10,7 +10,7 @@ class ShiftController extends Controller
 {
     public function index()
     {
-        return Shift::all();
+        return Shift::with(['user', 'role'])->get();
     }
 
     public function show($id)
@@ -24,28 +24,27 @@ class ShiftController extends Controller
             'date' => 'required|date',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
-            'role' => 'required|string',
+            'role_id' => 'required|exists:roles,id',
             'location' => 'required|string',
         ]);
-
+    
         return Shift::create($data);
     }
 
     public function update(Request $request, $id)
     {
-        $shift = Shift::findOrFail($id);
-
         $data = $request->validate([
-            'date' => 'date',
-            'start_time' => 'date_format:H:i',
-            'end_time' => 'date_format:H:i|after:start_time',
-            'role' => 'string',
-            'location' => 'string',
+            'date' => 'required|date',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:start_time',
+            'location' => 'required|string',
+            'role_id' => 'required|integer|exists:roles,id',
         ]);
-
+    
+        $shift = Shift::findOrFail($id);
         $shift->update($data);
-
-        return $shift;
+    
+        return response()->json($shift);
     }
 
     public function destroy($id)
@@ -54,13 +53,15 @@ class ShiftController extends Controller
         return response()->noContent();
     }
 
-    public function assignedToMe(Request $request)
+    public function assigned(Request $request)
     {
-        return Shift::where('assigned_to', $request->user()->id)->get();
+        return Shift::whereNotNull('assigned_to')
+            ->with('role') 
+            ->get();
     }
 
     public function unassigned()
     {
-        return Shift::whereNull('assigned_to')->get();
+        return Shift::whereNull('assigned_to')->with('role') ->get();
     }
 }

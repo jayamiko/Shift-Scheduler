@@ -1,7 +1,7 @@
 <template>
     <div class="container">
         <div class="navbar">
-            <h1 class="title">Shift Schedule</h1>
+            <h1 class="title-navbar">Daily Worker Roster Management System</h1>
             <button v-if="user" @click="logout">Logout</button>
         </div>
 
@@ -20,8 +20,7 @@
 import LoginForm from "./components/LoginForm.vue";
 import AdminInterface from "./components/AdminInterface.vue";
 import EmployeeInterface from "./components/EmployeeInterface.vue";
-
-const API_BASE = "http://localhost:8000/api";
+import { API_BASE } from "./config";
 
 export default {
     name: "App",
@@ -52,7 +51,6 @@ export default {
         },
     },
     mounted() {
-        const API_BASE = "http://localhost:8000/api";
         const token = localStorage.getItem("token");
         if (token) {
             fetch(`${API_BASE}/me`, {
@@ -95,9 +93,11 @@ body {
     align-items: center;
 }
 
-.title {
+.title-navbar {
     font-size: 1.25rem;
     font-weight: bold;
+    color: #333;
+    text-transform: uppercase;
 }
 
 .content {

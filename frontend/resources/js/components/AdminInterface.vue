@@ -1,65 +1,228 @@
 <template>
     <div class="admin-container">
-        <h2>Manajemen Shift</h2>
+        <form @submit.prevent="createShift" class="shift-form">
+            <div class="form-group">
+                <label>Shift Date</label>
+                <input type="date" v-model="newShift.date" required />
+            </div>
+
+            <div class="form-group">
+                <label>Start Time</label>
+                <input type="time" v-model="newShift.start_time" required />
+            </div>
+
+            <div class="form-group">
+                <label>End Time</label>
+                <input type="time" v-model="newShift.end_time" required />
+            </div>
+
+            <div class="form-group">
+                <label>Role</label>
+                <select v-model="newShift.role_id" required>
+                    <option disabled value="">Select Role</option>
+                    <option
+                        v-for="role in roles"
+                        :key="role.id"
+                        :value="role.id"
+                    >
+                        {{ role.name }}
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Location</label>
+                <input type="text" v-model="newShift.location" required />
+            </div>
+
+            <button class="btn-created" type="submit">Create New Shift</button>
+        </form>
+
+        <br />
+        <hr />
+        <br />
+
+        <h2>Shift Management</h2>
         <ul class="shift-list">
             <li v-for="shift in shifts" :key="shift.id" class="shift-item">
-                <span
-                    >{{ shift.date }} - {{ shift.role }} @
-                    {{ shift.location }}</span
-                >
-                <button class="danger" @click="deleteShift(shift.id)">
-                    Hapus
-                </button>
+                <div>
+                    <p class="shiftId">SHIFT ID: {{ shift.id }}</p>
+                    <h2>{{ shift.role.name }}</h2>
+                    <i>at {{ shift.location }}</i>
+                    <p>
+                        {{
+                            formatShiftDateTime(
+                                shift.date,
+                                shift.start_time,
+                                shift.end_time
+                            )
+                        }}
+                    </p>
+                </div>
+                <div class="action-buttons">
+                    <button @click="openEditModal(shift.id)">Edit</button>
+                    <button class="danger" @click="deleteShift(shift.id)">
+                        Delete
+                    </button>
+                </div>
             </li>
         </ul>
 
-        <form @submit.prevent="createShift" class="shift-form">
-            <input
-                v-model="newShift.date"
-                placeholder="Tanggal (YYYY-MM-DD)"
-                required
-            />
-            <input v-model="newShift.role" placeholder="Peran" required />
-            <input v-model="newShift.location" placeholder="Lokasi" required />
-            <button type="submit">Tambah Shift</button>
-        </form>
+        <br />
+        <hr />
+        <br />
 
-        <h2>Permintaan Shift</h2>
+        <h2>Shift Request</h2>
+        <div class="status-tabs">
+            <button
+                v-for="status in ['pending', 'approved', 'rejected']"
+                :key="status"
+                :class="{ active: activeStatus === status }"
+                @click="setStatus(status)"
+            >
+                {{ status }}
+            </button>
+        </div>
         <ul class="request-list">
             <li v-for="req in requests" :key="req.id" class="request-item">
-                <span>
-                    User #{{ req.user_id }} minta Shift #{{ req.shift_id }} -
-                    <strong>{{ req.status }}</strong>
-                </span>
-                <div class="action-buttons">
+                <div>
+                    <strong>
+                        {{ req.user.name }}
+                    </strong>
+                    <span class="request-status-text">
+                        <span v-if="req.status === 'pending'">request to</span>
+                        <span v-if="req.status === 'approved'"
+                            >assigned to</span
+                        >
+                        <span v-if="req.status === 'rejected'"
+                            >request rejected to</span
+                        >
+                        Shift #{{ req.shift_id }}
+                    </span>
+                </div>
+                <div v-if="req.status === 'pending'" class="action-buttons">
                     <button class="approve" @click="approve(req.id)">
-                        Setujui
+                        Approved
                     </button>
                     <button class="reject" @click="reject(req.id)">
-                        Tolak
+                        Rejected
                     </button>
                 </div>
             </li>
         </ul>
     </div>
+
+    <div v-if="editingShift" class="modal-backdrop">
+        <div class="modal">
+            <h3>Edit Shift</h3>
+            <form @submit.prevent="updateShift">
+                <div class="form-group">
+                    <label>Shift Date</label>
+                    <input type="date" v-model="editingShift.date" required />
+                </div>
+
+                <div class="form-group">
+                    <label>Start Time</label>
+                    <input
+                        type="time"
+                        v-model="editingShift.start_time"
+                        required
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label>End Time</label>
+                    <input
+                        type="time"
+                        v-model="editingShift.end_time"
+                        required
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label>Role</label>
+                    <select v-model="editingShift.role_id" required>
+                        <option
+                            v-for="role in roles"
+                            :key="role.id"
+                            :value="role.id"
+                        >
+                            {{ role.name }}
+                        </option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Location</label>
+                    <input
+                        type="text"
+                        v-model="editingShift.location"
+                        required
+                    />
+                </div>
+
+                <div class="modal-actions">
+                    <button class="btn-created" type="submit">
+                        Save Changes
+                    </button>
+                    <button type="button" @click="editingShift = null">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </template>
 
 <script>
-const API_BASE = "http://localhost:8000/api";
+import { API_BASE } from "../config";
+import { formatShiftDateTime } from "../utils/formatShiftDateTime";
 
 export default {
     name: "AdminInterface",
     data() {
         return {
+            editingShift: null,
+            activeStatus: "pending",
             shifts: [],
-            newShift: { date: "", role: "", location: "" },
+            newShift: {
+                date: "",
+                start_time: "",
+                end_time: "",
+                role_id: "",
+                location: "",
+            },
+            roles: [],
             requests: [],
         };
     },
     mounted() {
         this.fetchData();
+        this.fetchRequests();
+        fetch(`${API_BASE}/roles`)
+            .then((res) => res.json())
+            .then((data) => (this.roles = data));
     },
     methods: {
+        openEditModal(id) {
+            const token = localStorage.getItem("token");
+            const headers = { Authorization: `Bearer ${token}` };
+
+            fetch(`${API_BASE}/shifts/${id}`, { headers })
+                .then((res) => res.json())
+                .then((data) => {
+                    this.editingShift = {
+                        ...data,
+                        start_time: data.start_time?.substring(0, 5),
+                        end_time: data.end_time?.substring(0, 5),
+                    };
+                });
+        },
+        setStatus(status) {
+            this.activeStatus = status;
+            this.fetchRequests();
+        },
+        formatShiftDateTime,
         fetchData() {
             const token = localStorage.getItem("token");
             const headers = { Authorization: `Bearer ${token}` };
@@ -67,25 +230,85 @@ export default {
             fetch(`${API_BASE}/shifts`, { headers })
                 .then((res) => res.json())
                 .then((data) => (this.shifts = data));
+        },
+        fetchRequests() {
+            const token = localStorage.getItem("token");
+            const headers = { Authorization: `Bearer ${token}` };
 
-            fetch(`${API_BASE}/shifts/request/status`, { headers })
+            fetch(
+                `${API_BASE}/shifts/request/status?status=${this.activeStatus}`,
+                {
+                    headers,
+                }
+            )
                 .then((res) => res.json())
                 .then((data) => (this.requests = data));
         },
         createShift() {
             const token = localStorage.getItem("token");
+
+            const payload = {
+                ...this.newShift,
+                start_time: this.newShift.start_time?.substring(0, 5),
+                end_time: this.newShift.end_time?.substring(0, 5),
+            };
+
             fetch(`${API_BASE}/shift`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify(this.newShift),
+                body: JSON.stringify(payload),
             })
                 .then((res) => res.json())
-                .then(() => {
-                    this.newShift = { date: "", role: "", location: "" };
+                .then((data) => {
+                    alert("Shift created successfully!");
+                    this.newShift = {
+                        date: "",
+                        start_time: "",
+                        end_time: "",
+                        role_id: "",
+                        location: "",
+                    };
                     this.fetchData();
+                })
+                .catch((err) => {
+                    console.error(err);
+                    alert("Shift failed created.");
+                });
+        },
+        updateShift() {
+            const token = localStorage.getItem("token");
+
+            const payload = {
+                date: this.editingShift.date,
+                start_time: this.editingShift.start_time,
+                end_time: this.editingShift.end_time,
+                location: this.editingShift.location,
+                role_id: this.editingShift.role_id,
+            };
+
+            fetch(`${API_BASE}/shifts/edit/${this.editingShift.id}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(payload),
+            })
+                .then((res) => {
+                    if (!res.ok)
+                        throw new Error(`HTTP error! status: ${res.status}`);
+                    return res.json();
+                })
+                .then(() => {
+                    this.editingShift = null;
+                    this.fetchRequests();
+                    this.fetchData();
+                })
+                .catch((err) => {
+                    console.error("Update failed:", err.message);
                 });
         },
         deleteShift(id) {
@@ -104,7 +327,10 @@ export default {
                     Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({ request_id: id }),
-            }).then(() => this.fetchData());
+            }).then(() => {
+                this.fetchRequests();
+                this.fetchData();
+            });
         },
         reject(id) {
             const token = localStorage.getItem("token");
@@ -115,7 +341,10 @@ export default {
                     Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({ request_id: id }),
-            }).then(() => this.fetchData());
+            }).then(() => {
+                this.fetchRequests();
+                this.fetchData();
+            });
         },
     },
 };
@@ -127,10 +356,44 @@ export default {
     font-family: Arial, sans-serif;
 }
 
+.title {
+    color: #0169f1;
+    text-transform: uppercase;
+}
+
 h2 {
-    margin-top: 2rem;
-    margin-bottom: 1rem;
     color: #333;
+    margin: 0px;
+    margin-bottom: 1rem;
+}
+
+.shiftId {
+    font-size: 12px;
+}
+
+.status-tabs {
+    margin-bottom: 1rem;
+}
+
+.status-tabs button {
+    margin-right: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid #ccc;
+    color: #333;
+    background: #f9f9f9;
+    cursor: pointer;
+    border-radius: 4px;
+    text-transform: capitalize;
+}
+
+.status-tabs button.active {
+    background-color: #2d89ef;
+    color: white;
+    border-color: #2d89ef;
+}
+
+.request-status-text {
+    margin-left: 4px;
 }
 
 .shift-list,
@@ -151,31 +414,40 @@ h2 {
 }
 
 .shift-form {
-    margin-top: 2rem;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 1rem;
     max-width: 400px;
 }
 
-.shift-form input {
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+}
+
+input,
+select {
     padding: 0.5rem;
     border: 1px solid #ccc;
     border-radius: 4px;
 }
 
-.shift-form button {
-    padding: 0.5rem;
-    background-color: #2d89ef;
+.btn-created {
+    padding: 0.6rem;
+    background-color: #28a745;
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
 }
 
-.action-buttons {
-    display: flex;
-    gap: 0.5rem;
+.btn-created:hover {
+    background-color: #218838;
 }
 
 button {
@@ -193,10 +465,48 @@ button.approve {
 button.reject {
     background-color: #f44336;
     color: white;
+    margin-left: 4px;
 }
 
 button.danger {
     background-color: #ff5722;
     color: white;
+}
+
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+}
+
+.modal {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    width: 400px;
+    max-width: 90%;
+}
+
+.modal h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.modal-actions button {
+    padding: 0.5rem 1rem;
 }
 </style>

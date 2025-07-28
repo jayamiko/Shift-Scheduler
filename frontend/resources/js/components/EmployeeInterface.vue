@@ -1,63 +1,103 @@
 <template>
     <div class="employee-container">
         <section>
-            <h2>Shift Saya</h2>
+            <h2 class="title">Shift Assigned</h2>
             <ul class="shift-list">
                 <li
                     v-for="shift in assigned"
                     :key="shift.id"
                     class="shift-item"
                 >
-                    {{ shift.date }} - {{ shift.role }} @ {{ shift.location }}
+                    <div>
+                        <h2>{{ shift.role.name }}</h2>
+                        <i>at {{ shift.location }}</i>
+                        <p>
+                            {{
+                                formatShiftDateTime(
+                                    shift.date,
+                                    shift.start_time,
+                                    shift.end_time
+                                )
+                            }}
+                        </p>
+                    </div>
                 </li>
             </ul>
         </section>
 
+        <br />
+        <hr />
+        <br />
+
         <section>
-            <h2>Shift Tersedia</h2>
+            <h2 class="title">Shift Available</h2>
             <ul class="shift-list">
                 <li
                     v-for="shift in unassigned"
                     :key="shift.id"
                     class="shift-item"
                 >
-                    <span
-                        >{{ shift.date }} - {{ shift.role }} @
-                        {{ shift.location }}</span
-                    >
-                    <button @click="requestShift(shift.id)">Ajukan</button>
+                    <div>
+                        <p class="shiftId">SHIFT ID: {{ shift.id }}</p>
+                        <h2>{{ shift.role.name }}</h2>
+                        <i>at {{ shift.location }}</i>
+                        <p>
+                            {{
+                                formatShiftDateTime(
+                                    shift.date,
+                                    shift.start_time,
+                                    shift.end_time
+                                )
+                            }}
+                        </p>
+                    </div>
+                    <button @click="requestShift(shift.id)">Request</button>
                 </li>
             </ul>
         </section>
 
-        <section>
-            <h2>Status Permintaan</h2>
-            <ul class="request-list">
-                <li v-for="req in requests" :key="req.id" class="request-item">
-                    Shift #{{ req.shift_id }} -
-                    <strong>{{ req.status }}</strong>
-                </li>
-            </ul>
-        </section>
+        <br />
+        <hr />
+        <br />
+
+        <ShiftRequestStatus :requests="requests" />
     </div>
+
+    <NotificationModal
+        :message="notification.message"
+        :type="notification.type"
+        @close="notification.message = ''"
+    />
 </template>
 
 <script>
-const API_BASE = "http://localhost:8000/api";
+import { API_BASE } from "../config";
+import NotificationModal from "./NotificationModal.vue";
+import ShiftRequestStatus from "./ShiftRequestStatus.vue";
+import { formatShiftDateTime } from "../utils/formatShiftDateTime";
 
 export default {
     name: "EmployeeInterface",
+    components: {
+        NotificationModal,
+        ShiftRequestStatus,
+    },
     data() {
         return {
             assigned: [],
             unassigned: [],
             requests: [],
+            notification: {
+                message: "",
+                type: "",
+            },
         };
     },
     mounted() {
         this.fetchData();
     },
     methods: {
+        formatShiftDateTime,
         fetchData() {
             const token = localStorage.getItem("token");
             const headers = { Authorization: `Bearer ${token}` };
@@ -84,8 +124,21 @@ export default {
                 },
                 body: JSON.stringify({ shift_id: shiftId }),
             })
-                .then((res) => res.json())
-                .then(() => this.fetchData());
+                .then(async (res) => {
+                    const data = await res.json();
+                    if (!res.ok) throw data;
+                    this.notification = {
+                        message: "Berhasil mengajukan shift.",
+                        type: "success",
+                    };
+                    this.fetchData();
+                })
+                .catch((err) => {
+                    this.notification = {
+                        message: err?.error || "Gagal mengajukan shift.",
+                        type: "error",
+                    };
+                });
         },
     },
 };
@@ -97,10 +150,19 @@ export default {
     font-family: Arial, sans-serif;
 }
 
+.title {
+    color: #0169f1;
+    text-transform: uppercase;
+}
+
 h2 {
-    margin-top: 2rem;
-    margin-bottom: 1rem;
     color: #333;
+    margin: 0px;
+    margin-bottom: 1rem;
+}
+
+.shiftId {
+    font-size: 12px;
 }
 
 .shift-list,
