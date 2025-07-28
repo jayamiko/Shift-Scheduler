@@ -1,0 +1,32 @@
+{
+  "name": "frontend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "mix",
+    "start": "serve public",
+    "build": "mix --production",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "axios": "^1.11.0",
+    "serve": "^14.2.4",
+    "vue": "^3.5.18",
+    "vue-router": "^4.5.1",
+    "vue-template-compiler": "^2.7.16"
+  },
+  "devDependencies": {
+    "@vue/compiler-sfc": "^3.5.18",
+    "autoprefixer": "^10.4.21",
+    "css-loader": "^7.1.2",
+    "laravel-mix": "^6.0.49",
+    "postcss": "^8.5.6",
+    "postcss-loader": "^8.1.1",
+    "tailwindcss": "^4.1.11",
+    "vue-loader": "^17.4.2"
+  }
+}

@@ -15,7 +15,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Shift CRUD
+    // Shift
     Route::get('shifts', [ShiftController::class, 'index']);
     Route::post('shift', [ShiftController::class, 'store']);
     Route::get('shifts/{id}', [ShiftController::class, 'show']);

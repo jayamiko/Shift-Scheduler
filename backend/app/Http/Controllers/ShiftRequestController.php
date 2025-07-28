@@ -20,12 +20,10 @@ class ShiftRequestController extends Controller
         $user = Auth::user();
         $shift = Shift::findOrFail($request->shift_id);
 
-        // Constraint 1: Already assigned
         if ($shift->assigned_to) {
             return response()->json(['error' => 'Shift already assigned.'], 409);
         }
 
-        // Constraint 2: Overlapping shift
         $overlap = Shift::where('date', $shift->date)
             ->whereHas('requests', function ($q) use ($user) {
                 $q->where('user_id', $user->id)->where('status', 'approved');
@@ -39,7 +37,6 @@ class ShiftRequestController extends Controller
             return response()->json(['error' => 'Overlapping shift detected.'], 409);
         }
 
-        // Constraint 3: Max 1/day
         $dayCount = ShiftRequest::where('user_id', $user->id)
             ->whereHas('shift', fn ($q) => $q->whereDate('date', $shift->date))
             ->where('status', 'approved')
@@ -49,7 +46,6 @@ class ShiftRequestController extends Controller
             return response()->json(['error' => 'You already have a shift on that day.'], 409);
         }
 
-        // Constraint 4: Max 5/week
         $startOfWeek = Carbon::parse($shift->date)->startOfWeek();
         $endOfWeek = Carbon::parse($shift->date)->endOfWeek();
 
