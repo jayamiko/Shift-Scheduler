@@ -71,9 +71,9 @@ class ShiftController extends Controller
     public function assigned(Request $request)
     {
         return Shift::whereNotNull('assigned_to')
-            ->with('role') 
+            ->with(['role', 'user']) 
             ->get();
-    }
+    }    
 
     public function unassigned()
     {

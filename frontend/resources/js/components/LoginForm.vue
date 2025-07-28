@@ -71,29 +71,46 @@ export default {
         };
     },
     methods: {
-        login() {
-            fetch(`${API_BASE}/login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    email: this.email,
-                    password: this.password,
-                }),
-            })
-                .then((res) => res.json())
-                .then((data) => {
-                    if (data.token) {
-                        localStorage.setItem("token", data.token);
-                        fetch(`${API_BASE}/me`, {
-                            headers: { Authorization: `Bearer ${data.token}` },
-                        })
-                            .then((res) => res.json())
-                            .then((user) => this.$emit("login-success", user));
+        async login() {
+            try {
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        email: this.email,
+                        password: this.password,
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    if (
+                        response.status === 401 ||
+                        data.message === "Invalid credentials"
+                    ) {
+                        this.error = "Email atau password salah";
                     } else {
                         this.error = data.message || "Login gagal";
                     }
-                })
-                .catch(() => (this.error = "Login gagal"));
+                    return;
+                }
+
+                if (data.token) {
+                    localStorage.setItem("token", data.token);
+
+                    const userRes = await fetch(`${API_BASE}/me`, {
+                        headers: { Authorization: `Bearer ${data.token}` },
+                    });
+
+                    const user = await userRes.json();
+                    this.$emit("login-success", user);
+                } else {
+                    this.error = "Login gagal";
+                }
+            } catch (err) {
+                this.error = "Terjadi kesalahan saat login";
+            }
         },
     },
 };

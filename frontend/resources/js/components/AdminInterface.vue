@@ -11,48 +11,17 @@
         <hr />
         <br />
 
-        <form @submit.prevent="createShift" class="shift-form">
-            <div class="form-group">
-                <label>Shift Date</label>
-                <input type="date" v-model="newShift.date" required />
-            </div>
-
-            <div class="form-group">
-                <label>Start Time</label>
-                <input type="time" v-model="newShift.start_time" required />
-            </div>
-
-            <div class="form-group">
-                <label>End Time</label>
-                <input type="time" v-model="newShift.end_time" required />
-            </div>
-
-            <div class="form-group">
-                <label>Role</label>
-                <select v-model="newShift.role_id" required>
-                    <option disabled value="">Select Role</option>
-                    <option
-                        v-for="role in roles"
-                        :key="role.id"
-                        :value="role.id"
-                    >
-                        {{ role.name }}
-                    </option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>Location</label>
-                <input type="text" v-model="newShift.location" required />
-            </div>
-
-            <button class="btn-created" type="submit">Create New Shift</button>
-        </form>
-
-        <br />
-        <hr />
-        <br />
-
+        <div
+            style="
+                display: flex;
+                justify-content: flex-end;
+                margin-bottom: 1rem;
+            "
+        >
+            <button class="btn-created" @click="toggleCreateModal(true)">
+                Create New Shift
+            </button>
+        </div>
         <ShiftList
             :shifts="shifts"
             :roles="roles"
@@ -71,6 +40,67 @@
             @approve="approve"
             @reject="reject"
         />
+
+        <!-- Modal Create Shift -->
+        <div v-if="showCreateModal" class="modal-backdrop">
+            <div class="modal">
+                <h3>Create New Shift</h3>
+                <form @submit.prevent="createShift" class="shift-form">
+                    <div class="form-group">
+                        <label>Shift Date</label>
+                        <input type="date" v-model="newShift.date" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Start Time</label>
+                        <input
+                            type="time"
+                            v-model="newShift.start_time"
+                            required
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label>End Time</label>
+                        <input
+                            type="time"
+                            v-model="newShift.end_time"
+                            required
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Role</label>
+                        <select v-model="newShift.role_id" required>
+                            <option disabled value="">Select Role</option>
+                            <option
+                                v-for="role in roles"
+                                :key="role.id"
+                                :value="role.id"
+                            >
+                                {{ role.name }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Location</label>
+                        <input
+                            type="text"
+                            v-model="newShift.location"
+                            required
+                        />
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn-created" type="submit">Save</button>
+                        <button type="button" @click="toggleCreateModal(false)">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
         <!-- Modal Assign -->
         <div v-if="modalAssignShift" class="modal-backdrop">
@@ -193,6 +223,7 @@ export default {
     },
     data() {
         return {
+            showCreateModal: false,
             modalAssignShift: null,
             selectedUserId: "",
             users: [],
@@ -239,6 +270,18 @@ export default {
         handleSearch(newFilter) {
             this.assignmentFilter = { ...newFilter };
             this.fetchAssignments();
+        },
+        toggleCreateModal(state) {
+            this.showCreateModal = state;
+            if (!state) {
+                this.newShift = {
+                    date: "",
+                    start_time: "",
+                    end_time: "",
+                    role_id: "",
+                    location: "",
+                };
+            }
         },
         openAssignModal(shift) {
             this.modalAssignShift = shift;
@@ -484,7 +527,6 @@ h2 {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    max-width: 400px;
 }
 
 .form-group {

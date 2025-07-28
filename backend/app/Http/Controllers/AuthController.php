@@ -25,12 +25,9 @@ class AuthController extends Controller
             'role_id' => $validated['role_id'],
         ]);
     
-        $token = $user->createToken('api_token')->plainTextToken;
-    
         return response()->json([
             'status' => 'success',
             'user' => $user,
-            'token' => $token,
         ], 201);
     }
 
