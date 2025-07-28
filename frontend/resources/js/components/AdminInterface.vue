@@ -1,5 +1,16 @@
 <template>
     <div class="admin-container">
+        <ShiftAssignments
+            :assignments="assignments"
+            :filter="assignmentFilter"
+            @search="handleSearch"
+            @assign="openAssignModal"
+        />
+
+        <br />
+        <hr />
+        <br />
+
         <form @submit.prevent="createShift" class="shift-form">
             <div class="form-group">
                 <label>Shift Date</label>
@@ -42,148 +53,156 @@
         <hr />
         <br />
 
-        <h2>Shift Management</h2>
-        <ul class="shift-list">
-            <li v-for="shift in shifts" :key="shift.id" class="shift-item">
-                <div>
-                    <p class="shiftId">SHIFT ID: {{ shift.id }}</p>
-                    <h2>{{ shift.role.name }}</h2>
-                    <i>at {{ shift.location }}</i>
-                    <p>
-                        {{
-                            formatShiftDateTime(
-                                shift.date,
-                                shift.start_time,
-                                shift.end_time
-                            )
-                        }}
-                    </p>
-                </div>
-                <div class="action-buttons">
-                    <button @click="openEditModal(shift.id)">Edit</button>
-                    <button class="danger" @click="deleteShift(shift.id)">
-                        Delete
-                    </button>
-                </div>
-            </li>
-        </ul>
+        <ShiftList
+            :shifts="shifts"
+            :roles="roles"
+            @edit="openEditModal"
+            @delete="deleteShift"
+        />
 
         <br />
         <hr />
         <br />
 
-        <h2>Shift Request</h2>
-        <div class="status-tabs">
-            <button
-                v-for="status in ['pending', 'approved', 'rejected']"
-                :key="status"
-                :class="{ active: activeStatus === status }"
-                @click="setStatus(status)"
-            >
-                {{ status }}
-            </button>
-        </div>
-        <ul class="request-list">
-            <li v-for="req in requests" :key="req.id" class="request-item">
-                <div>
-                    <strong>
-                        {{ req.user.name }}
-                    </strong>
-                    <span class="request-status-text">
-                        <span v-if="req.status === 'pending'">request to</span>
-                        <span v-if="req.status === 'approved'"
-                            >assigned to</span
-                        >
-                        <span v-if="req.status === 'rejected'"
-                            >request rejected to</span
-                        >
-                        Shift #{{ req.shift_id }}
-                    </span>
-                </div>
-                <div v-if="req.status === 'pending'" class="action-buttons">
-                    <button class="approve" @click="approve(req.id)">
-                        Approved
-                    </button>
-                    <button class="reject" @click="reject(req.id)">
-                        Rejected
-                    </button>
-                </div>
-            </li>
-        </ul>
-    </div>
+        <ShiftRequestList
+            :requests="requests"
+            :activeStatus="activeStatus"
+            @status-change="setStatus"
+            @approve="approve"
+            @reject="reject"
+        />
 
-    <div v-if="editingShift" class="modal-backdrop">
-        <div class="modal">
-            <h3>Edit Shift</h3>
-            <form @submit.prevent="updateShift">
-                <div class="form-group">
-                    <label>Shift Date</label>
-                    <input type="date" v-model="editingShift.date" required />
-                </div>
-
-                <div class="form-group">
-                    <label>Start Time</label>
-                    <input
-                        type="time"
-                        v-model="editingShift.start_time"
-                        required
-                    />
-                </div>
-
-                <div class="form-group">
-                    <label>End Time</label>
-                    <input
-                        type="time"
-                        v-model="editingShift.end_time"
-                        required
-                    />
-                </div>
-
-                <div class="form-group">
-                    <label>Role</label>
-                    <select v-model="editingShift.role_id" required>
+        <!-- Modal Assign -->
+        <div v-if="modalAssignShift" class="modal-backdrop">
+            <div class="modal">
+                <h3>Assign Shift #{{ modalAssignShift.id }}</h3>
+                <form @submit.prevent="submitAssignment">
+                    <select v-model="selectedUserId" required>
+                        <option value="" disabled>Select User</option>
                         <option
-                            v-for="role in roles"
-                            :key="role.id"
-                            :value="role.id"
+                            v-for="user in nonAdminUsers"
+                            :key="user.id"
+                            :value="user.id"
                         >
-                            {{ role.name }}
+                            {{ user.name }}
                         </option>
                     </select>
-                </div>
 
-                <div class="form-group">
-                    <label>Location</label>
-                    <input
-                        type="text"
-                        v-model="editingShift.location"
-                        required
-                    />
-                </div>
-
-                <div class="modal-actions">
-                    <button class="btn-created" type="submit">
-                        Save Changes
-                    </button>
-                    <button type="button" @click="editingShift = null">
-                        Cancel
-                    </button>
-                </div>
-            </form>
+                    <div class="modal-actions">
+                        <button class="btn-created" type="submit">
+                            Assign
+                        </button>
+                        <button @click="closeAssignModal" type="button">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
+
+        <!-- Modal Edit Shift -->
+        <div v-if="editingShift" class="modal-backdrop">
+            <div class="modal">
+                <h3>Edit Shift</h3>
+                <form @submit.prevent="updateShift">
+                    <div class="form-group">
+                        <label>Shift Date</label>
+                        <input
+                            type="date"
+                            v-model="editingShift.date"
+                            required
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Start Time</label>
+                        <input
+                            type="time"
+                            v-model="editingShift.start_time"
+                            required
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label>End Time</label>
+                        <input
+                            type="time"
+                            v-model="editingShift.end_time"
+                            required
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Role</label>
+                        <select v-model="editingShift.role_id" required>
+                            <option
+                                v-for="role in roles"
+                                :key="role.id"
+                                :value="role.id"
+                            >
+                                {{ role.name }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Location</label>
+                        <input
+                            type="text"
+                            v-model="editingShift.location"
+                            required
+                        />
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn-created" type="submit">
+                            Save Changes
+                        </button>
+                        <button type="button" @click="editingShift = null">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Notification Modal -->
+        <NotificationModal
+            :message="notification.message"
+            :type="notification.type"
+            @close="notification.message = ''"
+        />
     </div>
 </template>
 
 <script>
 import { API_BASE } from "../config";
 import { formatShiftDateTime } from "../utils/formatShiftDateTime";
+import ShiftAssignments from "./ShiftAssigment.vue";
+import ShiftList from "./ShiftList.vue";
+import ShiftRequestList from "./ShiftRequestList.vue";
+import NotificationModal from "./NotificationModal.vue";
 
 export default {
     name: "AdminInterface",
+    components: {
+        ShiftAssignments,
+        ShiftList,
+        ShiftRequestList,
+        NotificationModal,
+    },
     data() {
         return {
+            modalAssignShift: null,
+            selectedUserId: "",
+            users: [],
             editingShift: null,
             activeStatus: "pending",
+            assignments: [],
+            assignmentFilter: {
+                date: "",
+                user: "",
+            },
             shifts: [],
             newShift: {
                 date: "",
@@ -194,16 +213,77 @@ export default {
             },
             roles: [],
             requests: [],
+            notification: {
+                message: "",
+                type: "",
+            },
         };
+    },
+    computed: {
+        nonAdminUsers() {
+            return this.users.filter((u) => u.is_admin !== true);
+        },
     },
     mounted() {
         this.fetchData();
         this.fetchRequests();
+        this.fetchAssignments();
         fetch(`${API_BASE}/roles`)
             .then((res) => res.json())
             .then((data) => (this.roles = data));
+        fetch(`${API_BASE}/users`)
+            .then((res) => res.json())
+            .then((data) => (this.users = data));
     },
     methods: {
+        handleSearch(newFilter) {
+            this.assignmentFilter = { ...newFilter };
+            this.fetchAssignments();
+        },
+        openAssignModal(shift) {
+            this.modalAssignShift = shift;
+            this.selectedUserId = "";
+        },
+        closeAssignModal() {
+            this.modalAssignShift = null;
+            this.selectedUserId = "";
+        },
+        submitAssignment() {
+            const token = localStorage.getItem("token");
+
+            fetch(`${API_BASE}/admin/assign`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    shift_id: this.modalAssignShift.id,
+                    user_id: this.selectedUserId,
+                }),
+            })
+                .then((res) => {
+                    if (!res.ok)
+                        return res.json().then((err) => Promise.reject(err));
+                    return res.json();
+                })
+                .then(() => {
+                    this.notification = {
+                        message: "Shift successfully assigned!",
+                        type: "success",
+                    };
+                    this.closeAssignModal();
+                    this.fetchData();
+                    this.fetchRequests();
+                    this.fetchAssignments();
+                })
+                .catch((err) => {
+                    this.notification = {
+                        message: err.message || "Failed to assign shift!",
+                        type: "error",
+                    };
+                });
+        },
         openEditModal(id) {
             const token = localStorage.getItem("token");
             const headers = { Authorization: `Bearer ${token}` };
@@ -231,15 +311,34 @@ export default {
                 .then((res) => res.json())
                 .then((data) => (this.shifts = data));
         },
+        fetchAssignments() {
+            const token = localStorage.getItem("token");
+            const headers = { Authorization: `Bearer ${token}` };
+
+            const { date, user } = this.assignmentFilter;
+            const params = new URLSearchParams();
+
+            if (date) params.append("date", date);
+            if (user) params.append("user", user);
+
+            fetch(`${API_BASE}/admin/assignments?${params.toString()}`, {
+                headers,
+            })
+                .then((res) => res.json())
+                .then((data) => {
+                    this.assignments = data;
+                })
+                .catch((err) => {
+                    console.error("Failed to fetch assignments:", err);
+                });
+        },
         fetchRequests() {
             const token = localStorage.getItem("token");
             const headers = { Authorization: `Bearer ${token}` };
 
             fetch(
                 `${API_BASE}/shifts/request/status?status=${this.activeStatus}`,
-                {
-                    headers,
-                }
+                { headers }
             )
                 .then((res) => res.json())
                 .then((data) => (this.requests = data));
@@ -262,8 +361,11 @@ export default {
                 body: JSON.stringify(payload),
             })
                 .then((res) => res.json())
-                .then((data) => {
-                    alert("Shift created successfully!");
+                .then(() => {
+                    this.notification = {
+                        message: "Shift created successfully!",
+                        type: "success",
+                    };
                     this.newShift = {
                         date: "",
                         start_time: "",
@@ -272,10 +374,14 @@ export default {
                         location: "",
                     };
                     this.fetchData();
+                    this.fetchAssignments();
                 })
                 .catch((err) => {
                     console.error(err);
-                    alert("Shift failed created.");
+                    this.notification = {
+                        message: err.message || "Shift creation failed.",
+                        type: "error",
+                    };
                 });
         },
         updateShift() {
@@ -303,12 +409,22 @@ export default {
                     return res.json();
                 })
                 .then(() => {
+                    this.notification = {
+                        message: "Shift update successfully.",
+                        type: "success",
+                    };
+
                     this.editingShift = null;
                     this.fetchRequests();
                     this.fetchData();
+                    this.fetchAssignments();
                 })
                 .catch((err) => {
                     console.error("Update failed:", err.message);
+                    this.notification = {
+                        message: err.message || "Shift update failed.",
+                        type: "error",
+                    };
                 });
         },
         deleteShift(id) {
@@ -330,6 +446,7 @@ export default {
             }).then(() => {
                 this.fetchRequests();
                 this.fetchData();
+                this.fetchAssignments();
             });
         },
         reject(id) {
@@ -344,6 +461,7 @@ export default {
             }).then(() => {
                 this.fetchRequests();
                 this.fetchData();
+                this.fetchAssignments();
             });
         },
     },
@@ -356,61 +474,10 @@ export default {
     font-family: Arial, sans-serif;
 }
 
-.title {
-    color: #0169f1;
-    text-transform: uppercase;
-}
-
 h2 {
     color: #333;
     margin: 0px;
     margin-bottom: 1rem;
-}
-
-.shiftId {
-    font-size: 12px;
-}
-
-.status-tabs {
-    margin-bottom: 1rem;
-}
-
-.status-tabs button {
-    margin-right: 0.5rem;
-    padding: 0.5rem 1rem;
-    border: 1px solid #ccc;
-    color: #333;
-    background: #f9f9f9;
-    cursor: pointer;
-    border-radius: 4px;
-    text-transform: capitalize;
-}
-
-.status-tabs button.active {
-    background-color: #2d89ef;
-    color: white;
-    border-color: #2d89ef;
-}
-
-.request-status-text {
-    margin-left: 4px;
-}
-
-.shift-list,
-.request-list {
-    list-style: none;
-    padding: 0;
-}
-
-.shift-item,
-.request-item {
-    margin-bottom: 0.75rem;
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
 }
 
 .shift-form {
@@ -471,6 +538,7 @@ button.reject {
 button.danger {
     background-color: #ff5722;
     color: white;
+    margin-left: 4px;
 }
 
 .modal-backdrop {

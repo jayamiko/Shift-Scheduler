@@ -9,7 +9,9 @@ class Shift extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['date', 'start_time', 'end_time', 'role_id', 'location'];
+    protected $fillable = [
+        'date', 'start_time', 'end_time', 'location', 'role_id', 'assigned_to'
+    ];    
 
     public function user()
     {
