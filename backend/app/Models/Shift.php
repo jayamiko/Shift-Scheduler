@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Carbon\Carbon;
 
 class Shift extends Model
 {
@@ -26,5 +27,20 @@ class Shift extends Model
     public function requests()
     {
         return $this->hasMany(ShiftRequest::class);
+    }
+
+    public function getDateAttribute($value)
+    {
+        return Carbon::parse($value)->timezone('Asia/Jakarta')->toDateString(); 
+    }
+
+    public function getStartTimeAttribute($value)
+    {
+        return Carbon::parse($value)->timezone('Asia/Jakarta')->format('H:i');
+    }
+
+    public function getEndTimeAttribute($value)
+    {
+        return Carbon::parse($value)->timezone('Asia/Jakarta')->format('H:i');
     }
 }

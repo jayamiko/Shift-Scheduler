@@ -27,7 +27,7 @@ class ShiftRequestController extends Controller
         }
 
         $existingRequest = ShiftRequest::where('shift_id', $shift->id)
-            ->where('status', '==', 'approved')
+            ->where('status', 'approved')
             ->first();
 
         if ($existingRequest && $existingRequest->user_id === $user->id) {
@@ -107,6 +107,17 @@ class ShiftRequestController extends Controller
             $query->where('status', $status);
         }
 
-        return $query->get();
+        $requests = $query->get();
+
+        $requests->transform(function ($request) {
+            if ($request->shift) {
+                $request->shift->date = Carbon::parse($request->shift->date)->timezone('Asia/Jakarta')->toDateString();
+                $request->shift->start_time = Carbon::parse($request->shift->start_time)->timezone('Asia/Jakarta')->format('H:i');
+                $request->shift->end_time = Carbon::parse($request->shift->end_time)->timezone('Asia/Jakarta')->format('H:i');
+            }
+            return $request;
+        });
+
+        return $requests;
     }
 }

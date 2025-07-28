@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
-
 class AuthController extends Controller
 {
     // Register
@@ -54,7 +53,7 @@ class AuthController extends Controller
         return response()->json(['user' => $user, 'token' => $token]);
     }
 
-    // Get authenticated user
+    // 
     public function me(Request $request)
     {
         return response()->json($request->user());

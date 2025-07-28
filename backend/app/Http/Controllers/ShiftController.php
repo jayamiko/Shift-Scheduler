@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Shift;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Carbon;
 
 class ShiftController extends Controller
 {
@@ -28,6 +29,13 @@ class ShiftController extends Controller
             'location' => 'required|string',
         ]);
     
+        $start = Carbon::createFromFormat('Y-m-d H:i', "{$data['date']} {$data['start_time']}", 'Asia/Jakarta')->setTimezone('UTC');
+        $end = Carbon::createFromFormat('Y-m-d H:i', "{$data['date']} {$data['end_time']}", 'Asia/Jakarta')->setTimezone('UTC');
+    
+        $data['start_time'] = $start->format('H:i');
+        $data['end_time'] = $end->format('H:i');
+        $data['date'] = $start->format('Y-m-d'); 
+    
         return Shift::create($data);
     }
 
@@ -40,10 +48,17 @@ class ShiftController extends Controller
             'location' => 'required|string',
             'role_id' => 'required|integer|exists:roles,id',
         ]);
-    
+
+        $start = Carbon::createFromFormat('Y-m-d H:i', "{$data['date']} {$data['start_time']}", 'Asia/Jakarta')->setTimezone('UTC');
+        $end = Carbon::createFromFormat('Y-m-d H:i', "{$data['date']} {$data['end_time']}", 'Asia/Jakarta')->setTimezone('UTC');
+
+        $data['start_time'] = $start->format('H:i');
+        $data['end_time'] = $end->format('H:i');
+        $data['date'] = $start->format('Y-m-d'); 
+
         $shift = Shift::findOrFail($id);
         $shift->update($data);
-    
+
         return response()->json($shift);
     }
 
