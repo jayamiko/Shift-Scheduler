@@ -1,32 +1,34 @@
 <template>
     <div class="container">
         <div class="navbar">
-            <h1 class="title">Shift Schedul</h1>
+            <h1 class="title">Shift Schedule</h1>
             <button v-if="user" @click="logout">Logout</button>
         </div>
 
         <div v-if="!user" class="content">
-            <!-- <LoginForm @login-success="handleLoginSuccess" /> -->
+            <LoginForm @login-success="handleLoginSuccess" />
         </div>
 
         <div v-else>
-            <!-- <AdminInterface v-if="user.is_admin" />
-            <EmployeeInterface v-else /> -->
+            <AdminInterface v-if="user.is_admin" />
+            <EmployeeInterface v-else />
         </div>
     </div>
 </template>
 
 <script>
-// import LoginForm from "./components/LoginForm.vue";
-// import AdminInterface from "./components/AdminInterface.vue";
-// import EmployeeInterface from "./components/EmployeeInterface.vue";
+import LoginForm from "./components/LoginForm.vue";
+import AdminInterface from "./components/AdminInterface.vue";
+import EmployeeInterface from "./components/EmployeeInterface.vue";
+
+const API_BASE = "http://localhost:8000/api";
 
 export default {
     name: "App",
     components: {
-        // LoginForm,
-        // AdminInterface,
-        // EmployeeInterface,
+        LoginForm,
+        AdminInterface,
+        EmployeeInterface,
     },
     data() {
         return {
@@ -38,7 +40,7 @@ export default {
             this.user = user;
         },
         logout() {
-            fetch("/api/logout", {
+            fetch(`${API_BASE}/logout`, {
                 method: "POST",
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -50,18 +52,25 @@ export default {
         },
     },
     mounted() {
+        const API_BASE = "http://localhost:8000/api";
         const token = localStorage.getItem("token");
         if (token) {
-            fetch("/api/me", {
+            fetch(`${API_BASE}/me`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
             })
-                .then((res) => res.json())
+                .then((res) => {
+                    if (!res.ok) throw new Error("Unauthenticated");
+                    return res.json();
+                })
                 .then((data) => {
                     this.user = data;
                 })
-                .catch(() => localStorage.removeItem("token"));
+                .catch(() => {
+                    localStorage.removeItem("token");
+                    this.user = null;
+                });
         }
     },
 };

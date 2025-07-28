@@ -16,60 +16,103 @@ class ShiftRequestController extends Controller
         $request->validate([
             'shift_id' => 'required|exists:shifts,id',
         ]);
-
+    
         $user = Auth::user();
         $shift = Shift::findOrFail($request->shift_id);
 
-        if ($shift->assigned_to) {
-            return response()->json(['error' => 'Shift already assigned.'], 409);
+        if ($shift->assigned_to && $shift->assigned_to !== $user->id) {
+            return response()->json([
+                'error' => 'Shift already assigned to another user.'
+            ], 409);
         }
 
-        $overlap = Shift::where('date', $shift->date)
-            ->whereHas('requests', function ($q) use ($user) {
-                $q->where('user_id', $user->id)->where('status', 'approved');
+        $existingRequest = ShiftRequest::where('shift_id', $shift->id)
+            ->where('status', '!=', 'rejected')
+            ->first();
+
+        if ($existingRequest) {
+            if ($existingRequest->user_id === $user->id) {
+                return response()->json([
+                    'error' => 'You have already requested this shift.'
+                ], 409);
+            } else {
+                return response()->json([
+                    'error' => 'This shift has already been requested by another user.'
+                ], 409);
+            }
+        }
+
+        $overlap = ShiftRequest::where('user_id', $user->id)
+            ->whereIn('status', ['pending', 'approved'])
+            ->whereHas('shift', function ($q) use ($shift) {
+                $q->where('date', $shift->date)
+                    ->where(function ($query) use ($shift) {
+                        $query->whereBetween('start_time', [$shift->start_time, $shift->end_time])
+                            ->orWhereBetween('end_time', [$shift->start_time, $shift->end_time])
+                            ->orWhere(function ($sub) use ($shift) {
+                                $sub->where('start_time', '<=', $shift->start_time)
+                                    ->where('end_time', '>=', $shift->end_time);
+                            });
+                    });
             })
-            ->where(function ($q) use ($shift) {
-                $q->whereBetween('start_time', [$shift->start_time, $shift->end_time])
-                  ->orWhereBetween('end_time', [$shift->start_time, $shift->end_time]);
-            })->exists();
-
+            ->exists();
+        
         if ($overlap) {
-            return response()->json(['error' => 'Overlapping shift detected.'], 409);
+            return response()->json(['error' => 'You already have an overlapping shift request.'], 409);
         }
-
+    
         $dayCount = ShiftRequest::where('user_id', $user->id)
-            ->whereHas('shift', fn ($q) => $q->whereDate('date', $shift->date))
+            ->whereHas('shift', fn($q) => $q->whereDate('date', $shift->date))
             ->where('status', 'approved')
             ->count();
-
+    
         if ($dayCount >= 1) {
-            return response()->json(['error' => 'You already have a shift on that day.'], 409);
+            return response()->json([
+                'error' => 'You already have a shift on this day.'
+            ], 409);
         }
-
-        $startOfWeek = Carbon::parse($shift->date)->startOfWeek();
-        $endOfWeek = Carbon::parse($shift->date)->endOfWeek();
-
+    
+        $startOfWeek = \Carbon\Carbon::parse($shift->date)->startOfWeek();
+        $endOfWeek = \Carbon\Carbon::parse($shift->date)->endOfWeek();
+    
         $weekCount = ShiftRequest::where('user_id', $user->id)
-            ->whereHas('shift', fn ($q) => $q->whereBetween('date', [$startOfWeek, $endOfWeek]))
+            ->whereHas('shift', fn($q) => $q->whereBetween('date', [$startOfWeek, $endOfWeek]))
             ->where('status', 'approved')
             ->count();
-
+    
         if ($weekCount >= 5) {
-            return response()->json(['error' => 'You exceeded weekly shift limit.'], 409);
+            return response()->json([
+                'error' => 'You have exceeded the maximum weekly shift limit (5).'
+            ], 409);
         }
-
+    
         $request = ShiftRequest::create([
             'user_id' => $user->id,
             'shift_id' => $shift->id,
             'status' => 'pending'
         ]);
-
-        return response()->json($request);
+    
+        return response()->json([
+            'message' => 'Shift requested successfully.',
+            'data' => $request
+        ]);
     }
 
-    public function status()
+    public function status(Request $request)
     {
-        $user = Auth::user();
-        return ShiftRequest::with('shift')->where('user_id', $user->id)->get();
+        $status = $request->query('status');
+        $allowedStatuses = ['pending', 'approved', 'rejected'];
+
+        if ($status && !in_array($status, $allowedStatuses)) {
+            return response()->json(['message' => 'Status invalid'], 400);
+        }
+
+        $query = ShiftRequest::with('shift');
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        return $query->get();
     }
 }

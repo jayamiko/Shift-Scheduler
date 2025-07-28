@@ -18,15 +18,15 @@ Route::middleware('auth:sanctum')->group(function () {
     // Shift
     Route::get('shifts', [ShiftController::class, 'index']);
     Route::post('shift', [ShiftController::class, 'store']);
+    
+    Route::get('shifts/assigned', [ShiftController::class, 'assignedToMe']);
+    Route::get('shifts/unassigned', [ShiftController::class, 'unassigned']);
+    Route::post('shifts/request', [ShiftRequestController::class, 'requestShift']);
+    Route::get('shifts/request/status', [ShiftRequestController::class, 'status']);
+    
     Route::get('shifts/{id}', [ShiftController::class, 'show']);
     Route::put('shifts/{id}', [ShiftController::class, 'update']);
     Route::delete('shifts/{id}', [ShiftController::class, 'destroy']);
-    Route::get('shifts/assigned', [ShiftController::class, 'assignedToMe']);
-    Route::get('shifts/unassigned', [ShiftController::class, 'unassigned']);
-
-    // Shift Requests (by workers)
-    Route::post('shifts/request', [ShiftRequestController::class, 'requestShift']);
-    Route::get('shifts/request/status', [ShiftRequestController::class, 'status']);
 
     // Admin Approve/Reject
     Route::post('admin/approve', [AdminController::class, 'approve']);

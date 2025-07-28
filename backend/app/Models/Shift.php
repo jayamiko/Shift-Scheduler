@@ -20,4 +20,9 @@ class Shift extends Model
     {
         return $this->belongsTo(Role::class);
     }
+
+    public function requests()
+    {
+        return $this->hasMany(ShiftRequest::class);
+    }
 }
