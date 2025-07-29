@@ -1,25 +1,27 @@
 import { defineConfig } from "vite";
-import laravel from "laravel-vite-plugin";
 import vue from "@vitejs/plugin-vue";
+import path from "path";
 
 export default defineConfig({
-    plugins: [
-        laravel({
-            input: ["resources/css/app.css", "resources/js/app.js"],
-            refresh: true,
-        }),
-        vue({
-            template: {
-                transformAssetUrls: {
-                    base: null,
-                    includeAbsolute: false,
-                },
-            },
-        }),
-    ],
+    plugins: [vue()],
+    root: ".", // root project tetap di frontend/
+    base: "/", // public path
+
     resolve: {
         alias: {
-            vue: "vue/dist/vue.esm-bundler.js",
+            "@": path.resolve(__dirname, "resources/js"),
         },
+    },
+
+    build: {
+        outDir: "dist", // hasil build Vue
+        emptyOutDir: true,
+        sourcemap: true,
+    },
+
+    server: {
+        host: "0.0.0.0", // agar bisa diakses dari container lain
+        port: 3000,
+        strictPort: true,
     },
 });
